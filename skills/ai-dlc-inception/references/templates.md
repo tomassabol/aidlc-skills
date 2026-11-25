@@ -1,95 +1,137 @@
 # Inception templates
 
+**Re-read this file before writing an artifact.** If `aidlc-docs/templates/<artifact>.md` exists, use its headings instead.
+
+**ID scheme.** IDs are permanent: never renumber them, and never reuse a deferred ID.
+
+| Prefix | Meaning |
+|---|---|
+| `FR1`, `FR1.2` | functional requirement and sub-requirement |
+| `NFR2` | non-functional requirement |
+| `US1.3` | user story |
+| `AC1.3.2` | acceptance criterion |
+| `BR4` | business rule |
+| `U1` / `u1-ideas` | unit ID and its folder name |
+
+**Coverage statuses:** OK, GAP, ORPHAN, Deferred (with the user's reason), N/A (with a reason).
+
 ## requirement-verification-questions.md (excerpt)
 
 ```markdown
 # Requirements Verification Questions
 
-> Fill in a letter after each `[Answer]:` (X = Other, then describe). Say "done" when finished, or "guide me" to answer in chat.
+> Fill in a letter after each `[Answer]:` (X = other, then describe). Say "done", or "guide me".
 
-## Q1. [product] What problem does this solve, and for whom?
-Context: anchors the Intent in business terms.
+## Q0. Taken from your documents. Please confirm
+- Personas: employees, line managers (brief.md § Personas: "managers approve first")
+A) Correct  B) Corrections below
+[Answer]:
 
-A) <option derived from the request>
+## Q1. [product] Team size and timeline for this Intent?
+Context: used to right-size architecture and unit count. *Two-way door.*
 
-B) <option>
+A) 1-2 people, under 1 month
+
+B) 3-6 people, 1-3 months
+
+C) 7+ people or multiple teams
 
 X) Other (please describe after [Answer]: below)
+
+Recommended: B (from the README contributors list).
 
 [Answer]:
 
 ## Q2. [product] How will we know it succeeded?
-Context: becomes the measurement criteria traced back to the Intent.
+Context: becomes the Success Measures with baseline and target. *Two-way door.*
+...
 
-A) Adoption metric (e.g. % of employees submitting ideas per quarter)
-
-B) Cycle-time metric (e.g. idea-to-decision under 5 days)
-
-C) Cost or revenue metric
-
-X) Other (please describe after [Answer]: below)
-
+## Q8. [security] Apply the security baseline extension?
+A) Yes, enforce it  B) No (prototype or internal tool)  X) Other
 [Answer]:
 
-## Q3. [security] What data sensitivity applies?
-...
+## Decisions Summary
+- Q1: B, 3-6 people, 1-3 months
 ```
 
-Cover these categories, skipping any that are already clear:
+Categories to cover, skipping any that are already clear:
 - users and personas
 - core capabilities
-- success metrics
+- success measures
+- team size and timeline
 - scope boundaries
 - data and integrations
 - volume and performance
 - security and compliance
 - availability
 - existing constraints
-- timeline and risk
+- extension opt-ins
 
 ## requirements.md
 
 ```markdown
 # Requirements
 
+## Summary
+<≤10 lines: intent, top FRs, key NFRs, biggest assumption, out of scope>
+
 ## Intent Analysis
 - **Request**: "<verbatim user request>"
-- **Clarity**: clear | vague | incomplete
-- **Type**: ... **Scope**: ... **Complexity**: ...
-- **Depth**: Minimal | Standard | Comprehensive
+- **Clarity / Type / Scope / Complexity / Depth**: ...
 
 ## Intent
-<2-4 sentences in business language: who, what capability, why it matters. No technology choices.>
+<2-4 sentences in business language. No technology choices unless a stated constraint.>
 
 ## Success Measures
-- <metric traced to the intent>
+| Metric | Baseline | Target | Check date | Source |
+|---|---|---|---|---|
+| Idea-to-decision time | ~14 days | < 5 days | launch + 60 days | [Q2] |
 
 ## Functional Requirements
-- **FR-1 <name>**: <the system shall ...>
+- **FR1 Submit idea**: the system shall ... [desc]
+  - **FR1.1**: ... [Q3]
 
 ## Non-Functional Requirements
-- **NFR-1 Performance**: <measurable target>
+- **NFR1 Performance**: p95 page load < 1.5 s at 200 concurrent users [Q5]
 
-## Assumptions
+## Assumptions & Open Questions
+| Item | Label | Reason / how to confirm |
+|---|---|---|
+| Users authenticate via existing SSO | Assumed | No question asked, because the repo already uses Okta. Confirm in Q-next. |
+
 ## Out of Scope
-## Open Risks
+## Open Decisions
+| ID | Decision | Owner | Blocking? |
 ```
+
+Source tags:
+- `[desc]`: the user's request
+- `[Qn]`: an answer
+- `[doc]`: the team's documents
+- `[memory]`: `memory.md`
+- `[assumption]`: never used as if confirmed
 
 ## stories.md
 
 ```markdown
 # User Stories
 
-## Story US-1: <title>
-**Persona**: <persona>  **Traces to**: FR-1, NFR-2  **Unit**: <assigned in Units Generation>
+## Summary
+<≤10 lines: personas, story count by epic, coverage status>
 
-As a <persona>, I want <capability>, so that <value>.
+## US1.1: Submit an idea
+**Persona**: Employee   **Traces to**: FR1, NFR1   **Unit**: <set in Units Generation>
 
-**Acceptance criteria**
-- Given <context>, when <action>, then <observable outcome>
-- Given ..., when ..., then ...
+As an employee, I want to submit an idea with a title and description, so that it reaches the right approver.
 
-**Notes**: <edge cases, business rules>
+- **AC1.1.1** Given I am signed in, when I submit a title (1-120 chars) and description, then the idea is saved as "Submitted" and I see it in My Ideas.
+- **AC1.1.2** Given the title is empty, when I submit, then I see "Title is required" and nothing is saved.
+
+## FR → Story coverage
+| FR | Stories | Status |
+|---|---|---|
+| FR1 | US1.1, US1.2 | OK |
+| FR4 | — | Deferred: "phase 2" (user, Q6) |
 ```
 
 ## execution-plan.md
@@ -98,47 +140,34 @@ As a <persona>, I want <capability>, so that <value>.
 # Execution Plan
 
 ## Summary
-- **Intent**: <one line>
-- **Profile / Depth**: feature / Standard
-- **Risk**: Medium, because <reason>
-- **Impact areas**: user-facing, data model, API
+- **Intent**: <one line>  **Profile / Depth / Test strategy**: feature / Standard / Standard
+- **Risk**: Medium, because <reason>   **Impact**: user-facing, data model, API
 
 ## Stage Decisions
 - [x] Requirements Analysis: COMPLETED
 - [x] User Stories: COMPLETED
-- [ ] Application Design: EXECUTE, because two new components are needed (Idea, Approval)
-- [S] Units Generation: SKIP, because there is a single Unit (modular monolith)
-- [ ] Functional Design (unit: core): EXECUTE, because of approval-chain business rules
-- [ ] NFR Requirements (unit: core): EXECUTE, because of SSO and audit requirements
-- [ ] NFR Design (unit: core): EXECUTE
+- [ ] Application Design: EXECUTE, because two new components are needed
+- [S] Units Generation: SKIP, because there are 4 stories and one domain (below the thresholds)
+- [ ] Functional Design (u1-ideas): EXECUTE, because of approval-chain rules
+- [ ] NFR Requirements (u1-ideas): EXECUTE, because of SSO and audit
 - [S] Infrastructure Design: SKIP, because the existing ECS service is reused
-- [ ] Code Generation (unit: core): EXECUTE
+- [ ] Code Generation (u1-ideas): EXECUTE. Bolt type: ddd
 - [ ] Build and Test: EXECUTE
-- [S] Operations: SKIP, because the existing pipeline deploys it
 
 ## Flow
-
 ```mermaid
 flowchart TD
-  start([Start]) --> RA[Requirements Analysis]
-  RA --> US[User Stories]
-  US --> WP[Workflow Planning]
-  WP --> AD[Application Design]
-  AD --> FD[Functional Design]
-  FD --> NR[NFR Requirements] --> ND[NFR Design]
-  ND --> CG[Code Generation] --> BT[Build and Test]
-  BT --> done([Done])
-  UG[Units Generation]:::skip
-  ID[Infrastructure Design]:::skip
-  classDef skip stroke-dasharray: 5 5,color:#888;
+  RA[Requirements Analysis] --> US[User Stories] --> WP[Workflow Planning]
+  WP --> AD[Application Design] --> FD[Functional Design]
+  FD --> NR[NFR Requirements] --> ND[NFR Design] --> CG[Code Generation] --> BT[Build and Test]
 ```
+<!-- Text: Requirements → Stories → Planning → App Design → Functional → NFR Req → NFR Design → Code → Build & Test. Skipped: Units Generation, Infrastructure Design. -->
 
 ## Change Sequence (brownfield)
 1. <component>: <change type>: <reason>
 
 ## Success Criteria & Quality Gates
-- All acceptance criteria covered by automated tests
-- No regression in existing test suite
+## Open Decisions
 ````
 
 ## unit-of-work.md
@@ -146,14 +175,20 @@ flowchart TD
 ```markdown
 # Units of Work
 
-## Unit: <name>
-- **Purpose**: <bounded context in one line>
-- **Stories**: US-1, US-3, US-4
-- **Owned entities**: Idea, Vote
-- **Provides**: <API/events other units consume>
-- **Consumes**: <from which units>
-- **Code location**: src/<unit>/ (greenfield)
-- **Suggested Bolts**:
-  1. Walking skeleton: submit idea end-to-end, persisted, visible in the list. DoD: e2e test green.
-  2. Approval chain rules. DoD: all approval acceptance criteria pass.
+## Summary
+<≤10 lines: units, kinds, dependency order, skeleton>
+
+## U1 / u1-ideas
+- **Purpose**: idea lifecycle (bounded context)   **Kind**: service
+- **Stories**: US1.1, US1.2, US2.1
+- **Owned entities**: Idea, Vote   **Commands**: SubmitIdea, WithdrawIdea
+- **Publishes**: IdeaSubmitted   **Consumes**: ApprovalDecided (from U2)
+- **Interfaces**: REST /ideas (contract: ...)
+- **Code location**: src/ideas/
+- **Bolts**:
+  1. *ddd*: walking skeleton (submit an idea end to end, persisted, listed). DoD: AC1.1.1 e2e green. Hypothesis: our SSO + DB setup works end to end.
+  2. *simple*: withdraw and edit. DoD: AC1.2.* green.
+
+## External dependencies
+| Dependency | Owner | Lead time | Blocks | Fallback |
 ```

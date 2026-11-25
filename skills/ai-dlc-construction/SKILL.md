@@ -1,182 +1,243 @@
 ---
 name: ai-dlc-construction
-description: AI-DLC Construction phase. Turns approved Units of Work into tested, operations-ready code through Bolts (short cycles of hours or days) and Mob Construction. Runs Functional Design, NFR Design, Infrastructure Design, Code Generation, and Build & Test, with human approval of the code plan before any code is written. Use when the user asks to build, implement or code a Unit or story under AI-DLC, start a Bolt, do domain/functional design, NFR or infrastructure design, generate code from an approved plan, or run build and test, or when aidlc-state.md shows the Construction phase.
+description: AI-DLC Construction phase. Turns approved Units of Work into tested, operations-ready code through Bolts (cycles of hours or days) and Mob Construction. Runs Functional Design, NFR Requirements, NFR Design and Infrastructure Design as needed, then Code Generation from a human-approved plan, then Build & Test with a target verification matrix and a GO/NO-GO report. Use when the user asks to build, implement or code a Unit or story under AI-DLC, start or plan a Bolt, do domain/functional, NFR or infrastructure design, generate code from an approved plan, or run build and test, or when aidlc-state.md shows Construction. Do not use for quick edits outside an AI-DLC workflow.
 ---
 
 # AI-DLC Construction: HOW
 
-Construction turns validated Units of Work into tested, operations-ready **Deployment Units**:
-- packaged code
-- configuration
-- infrastructure as code
-- tests
+Construction turns validated Units of Work into tested, operations-ready **Deployment Units**: code, configuration, IaC and tests.
 
-It runs in **Bolts**. A Bolt is a short, adaptive cycle measured in **hours or days, not weeks**, and it replaces the sprint. A Unit takes one or more Bolts.
+It runs in **Bolts**, short cycles measured in **hours or days, not weeks**. The work is **AI-driven and human-validated**:
+- **Mob Construction:** the team works on a shared screen. The AI proposes and humans validate.
+- **Mob Testing:** the team analyses failures together.
 
-The work is **AI-driven and human-validated**. The ritual is **Mob Construction**: the team works on a shared screen, the AI proposes, and humans validate in real time. Build & Test adds **Mob Testing**, where the team analyses failures together.
+## Inputs and outputs
+| | |
+|---|---|
+| **Required** | the requirements, plus either the stories or a clear task description |
+| **Optional** | `unit-of-work*.md`, `execution-plan.md`, `standards/`, reverse-engineering artifacts, `memory.md` |
+| **Writes** | `aidlc-docs/construction/**`, code and tests in the workspace, `standards/decisions-index.md`, `verification/phase-check-construction.md` |
+| **Hands off to** | `ai-dlc-operations`, when the Summary Report says GO |
 
-## Shared rules (from the `ai-dlc` orchestrator)
-- Docs go in `aidlc-docs/construction/`, and **code never goes inside `aidlc-docs/`**. Brownfield code follows the existing layout, and files are edited in place.
-- Questions go in files with `[Answer]:` tags. Validate the answers and follow up on anything vague.
-- Plan, then get approval, then execute step by step, ticking `[x]` in the same turn. Log every user input verbatim in `audit.md`.
-- Construction gates have **exactly two options**: 🔧 **Request Changes** / ✅ **Continue to Next Stage**. They are hard stops.
+**Running without the orchestrator or Inception:**
+- Ask for the requirements or story, or point at a ticket, in a short question file.
+- Treat the whole change as **one zero-unit scope**: run Code Generation once under `construction/code-generation/`.
+- Create the state and audit files lazily, the first time you need them.
 
-## Stage sequence (per Unit, in dependency order)
+## Shared rules (full versions in the `ai-dlc` skill)
+- Docs go in `aidlc-docs/construction/`. **Code never goes in `aidlc-docs/`.** Brownfield files are edited in place.
+- Questions go in files. Plan, then approval, then execute, ticking `[x]` in the same turn. Log every user input verbatim.
+- Load `memory.md` and `standards/` for every unit. Use the `## Summary` sections of upstream artifacts. Open full files only when generating.
+- **Never weaken a quality target** to get green: no lowering an NFR, coverage floor, timeout, lint rule or test assertion.
+- **Leave user-owned files alone:** no README, LICENSE or existing docs unless the user asked.
+- Construction gates have **exactly two options**: 🔧 Request Changes / ✅ Continue to Next Stage. They are hard stops.
+
+## Bolts
+See [references/bolt-types.md](references/bolt-types.md). At the start of each unit, confirm its Bolts. Each Bolt has:
+- **Type:**
+  - `simple`: straight to the code plan
+  - `ddd`: the needed design stages, then code
+  - `spike`: time-boxed learning, no production code
+- **Scope:** the stories or tasks it covers.
+- **Definition of Done.**
+- **Confidence hypothesis:** what shipping it proves or disproves.
+- **Verification command:** an exact command scoped to the unit, approved by the human. Never a bare `npm test`.
+
+Bolts can be re-planned (split, appended, reordered) when the human approves. Log the change.
+
+**Walking skeleton.** On a new system, the first unit's first Bolt is the thinnest end-to-end slice.
+- It runs through **all** its stages, including Code Generation, before any other unit starts.
+- Its verification command must pass, and then a human approves the checkpoint.
+- A design review on its own doesn't count as a walking skeleton.
+
+**Autonomy (asked once, after the skeleton):** Review each checkpoint, or Continue automatically.
+- **Continue automatically** waives only the ordinary stage-completion gates for later units.
+- It **never** waives:
+  - code-plan approval
+  - summary confirmations
+  - the choice of verification command
+  - failure decisions
+  - anything production-affecting
+
+## Stage sequence (per unit, in dependency order)
 
 ```
-for each Unit (respect unit-of-work-dependency.md):
-   [Functional Design] → [NFR Requirements] → [NFR Design] → [Infrastructure Design] → Code Generation
-then once:  Build & Test → Summary Report (go/no-go for Operations)
+for each Unit:  [Functional Design] → [NFR Requirements] → [NFR Design] → [Infrastructure Design] → Code Generation
+then once:      Build & Test → Summary Report (GO/NO-GO)
 ```
 
-**The AI skips stages dynamically, based on complexity.** Use what `execution-plan.md` decided. Without an execution plan:
-- A simple bug fix or small change goes **straight to Code Generation**.
-- Add design stages only when the change involves new business rules, data models, quality targets, or infrastructure.
+**Skip stages dynamically.** Use `execution-plan.md`. Without it:
+- A simple change or bugfix goes **straight to Code Generation**.
+- Add design stages only for new business rules, data models, quality targets or infrastructure.
 
-Each design stage has the same shape:
-1. Read the upstream artifacts.
-2. Write the plan `construction/plans/{unit}-{stage}-plan.md`, with checkboxes and embedded `[Answer]:` questions.
-3. Validate the answers.
-4. Generate the artifacts.
-5. Present the 2-option gate.
-
-## Bolt planning
-At the start of each Unit, propose its Bolts (or confirm the ones suggested in Inception). Each Bolt gets:
-- **Scope:** which stories or tasks it covers.
-- **Definition of Done:** acceptance criteria that pass, tests that are green, artifacts that are updated.
-- **Confidence hypothesis:** what shipping this Bolt proves or disproves, e.g. "SSO integration works with our IdP".
-- **Verification command:** the command that proves it works (test suite, e2e script), approved by the human.
-
-Make the first Bolt of a new system a **walking skeleton**: the thinnest end-to-end slice. Its verification must pass before later Bolts build on it.
+**Every design stage follows the same shape:**
+1. Read the upstream summaries.
+2. Write the plan `construction/plans/{unit}-{stage}-plan.md`, with checkboxes and `[Answer]:` questions.
+3. Validate the answers: apply the conflict rules and confirm the summary.
+4. Generate the artifacts, each opening with a `## Summary`.
+5. **Review loop:** an independent reviewer checks the artifacts. Fix the findings, then re-review, **at most 2 rounds**.
+6. Present the 2-option gate, with the Review line.
 
 ---
 
 ## a. Functional Design (the domain model)
-**Purpose:** model the business entities, rules and workflows in **technology-agnostic** language. Leave out frameworks and databases.
-
-- **Questions:**
-  - entities and their lifecycles
-  - invariants and business rules
-  - workflows and state transitions
-  - validation
-  - error cases
-  - edge scenarios
-- **Approach:** DDD tactical patterns, used where they help: aggregates, entities, value objects, domain events, repositories.
+Model the business entities, rules and workflows in **technology-agnostic** language.
+- **Questions:** entity lifecycles, invariants, rules, state transitions, validation, error cases, edge scenarios.
+- **Approach:** DDD tactical patterns where they help: aggregates, entities, value objects, domain events, repositories.
 - **Output** in `construction/{unit}/functional-design/`:
-  - `domain-entities.md`: entities, attributes, relationships, aggregates
-  - `business-rules.md`: numbered rules (`BR-n`), each traced to stories
-  - `business-logic-model.md`: workflows and state machines (Mermaid)
-  - `frontend-components.md`: only if there is a UI (component tree, state, validation, API calls)
-- Gate: 🔧 **Functional Design Complete - <unit>**
+  - `domain-entities.md`
+  - `business-rules.md`: `BR` IDs, each traced to stories
+  - `business-logic-model.md`: state machines in Mermaid, with a text fallback
+  - `frontend-components.md`: only if there's a UI
+  - **Testable properties**, per rule: round-trip, invariant, idempotence and so on. Required when the PBT extension is on.
+
+Gate: 🔧 **Functional Design Complete - <unit>**
 
 ## b. NFR Requirements
-**Purpose:** pin down the quality attributes as measurable targets, and choose the tech stack.
-
+Turn the quality attributes into **measurable targets**, and choose the stack.
 - **Questions:**
-  - performance (latency, throughput)
-  - scalability
-  - availability and RTO/RPO
-  - security and compliance
-  - reliability
-  - maintainability
-  - observability
+  - performance, scalability, availability and RTO/RPO
+  - security and compliance, reliability, maintainability
   - tech stack
-- Example: "10,000 TPS at 99.99% uptime" is an NFR concern, not a functional one.
-- **Output** in `construction/{unit}/nfr-requirements/`:
-  - `nfr-requirements.md`: measurable targets
-  - `tech-stack-decisions.md`: each choice with its rationale, marked one-way or two-way door
-- Gate: 📊 **NFR Requirements Complete - <unit>**
+  - **three ops questions:**
+    - observability level: minimal, standard or full
+    - error-tracking approach
+    - lifecycle: health only; or health, readiness and graceful shutdown; or all of those plus startup probe and drain
+- **Output:**
+  - `nfr-requirements.md`
+  - `tech-stack-decisions.md`, with a **version map**:
+
+    | Tool | Version | Source | Date | Verified |
+    |---|---|---|---|---|
+
+    Look up each tool's current stable or LTS version from its registry. Never write "latest". Avoid major versions under 3 months old. Mark a version unverified if you're offline. Then copy the result into `standards/tech-stack.md`.
+
+Gate: 📊 **NFR Requirements Complete - <unit>**
 
 ## c. NFR Design (logical design)
-**Purpose:** meet the NFRs with **logical components and design patterns**, such as caching, queues, circuit breakers, CQRS, idempotency, retries, and authorisation layers. These are still provider-neutral.
+Meet the NFRs with **logical components and patterns**, still provider-neutral: caching, queues, circuit breakers, idempotency, retries, CQRS, authorisation layers.
+- Each pattern traces to an NFR and has a **simpler fallback** written down. Prefer the simpler one unless the NFR demands more.
+- **Output:** `nfr-design-patterns.md`, `logical-components.md`.
 
-- Check that each pattern is **needed** (traced to an NFR) and **implementable**. Prefer the simpler option. Record the simpler fallback for every complex pattern.
-- **Output** in `construction/{unit}/nfr-design/`:
-  - `nfr-design-patterns.md`
-  - `logical-components.md`
-- Gate: 🎨 **NFR Design Complete - <unit>**
+Gate: 🎨 **NFR Design Complete - <unit>**
 
 ## d. Infrastructure Design
-**Purpose:** map logical components to **concrete cloud services and deployment architecture**.
-
-- **Questions:**
-  - environment(s)
-  - compute
-  - storage
-  - messaging
-  - networking
-  - identity
-  - monitoring
-  - shared vs per-unit infrastructure
-- Record each significant mapping as an **Architecture Decision Record** (context, options, decision, consequences).
-- **Output** in `construction/{unit}/infrastructure-design/`:
+Map the logical components to **concrete services and deployment architecture**.
+- **Questions:** environments, compute, storage, messaging, networking, identity, monitoring, and shared vs per-unit infrastructure.
+- Record each significant mapping as an **ADR** (context, options, decision, consequences). Add each ADR to `standards/decisions-index.md` with a "Read when" line.
+- **Output:**
   - `infrastructure-design.md`
   - `deployment-architecture.md`
-  - `adr/ADR-nnn-<title>.md`
+  - `adr/ADR-nnn-*.md`
   - `construction/shared-infrastructure.md`, if any infrastructure is shared
-- Gate: 🏢 **Infrastructure Design Complete - <unit>**
+
+Gate: 🏢 **Infrastructure Design Complete - <unit>**
 
 ## e. Code Generation (always)
-**Code is generated only after a human approves the AI's detailed execution plan.**
+**No code before a human approves the detailed plan.**
 
-**Part 1: Plan.** Write `construction/plans/{unit}-code-generation-plan.md` (template in [references/code-generation-plan.md](references/code-generation-plan.md)). It must contain:
-- numbered checkbox steps in a sensible order: structure → domain logic + unit tests → persistence + tests → API + tests → UI + tests → migrations → docs → deployment artifacts
-- the **exact file paths** for each step, marked create or modify. For brownfield work, take them from `reverse-engineering/code-structure.md`.
-- **traceability:** which stories and business rules each step implements
-- interfaces and contracts consumed from other Units
-- a statement that this plan is the single source of truth for the step
+**Part 1: Plan.** Write `construction/plans/{unit}-code-generation-plan.md` from [references/code-generation-plan.md](references/code-generation-plan.md).
 
-Summarise the plan in chat, log the prompt, and **stop for explicit approval**.
+- **Summary**, three lines:
+  - `Builds:` what this plan builds
+  - `Touches:` the main files or folders
+  - `Tests:` how many tests, and of what kind
+  - add `Adds:` whenever the plan creates data-model elements that no requirement asked for
+- **Steps:** numbered checkboxes, each with exact file paths (create or modify) and a `Ref:` (US, AC, BR or NFR), or marked `scaffold`.
+- **Name every entity, table, column or field** a step creates or changes. Anything not asked for upstream goes under `## Assumptions`, with the reason it's needed.
+- **Tests go in the plan,** never deferred to Build & Test:
+  - Put test-runner setup before the first test step.
+  - Test volume follows the **test strategy**:
+    - Minimal: one test per AC, plus one happy-path test per component
+    - Standard: 5 to 8 per component, unit plus key integration
+    - Comprehensive: 10 to 15 per component, plus e2e, and performance and security tests if NFRs need them
+  - **Floors:**
+    - bugfix and security-patch: start with a **regression test at the narrowest level that reproduces the defect**
+    - feature and full: 80% line coverage on new code unless the user changes it
+  - **Methodology** (`tdd`, `bdd` or `test-after`, from the state file or `standards/`) sets the step order.
+- **Traceability, checked both ways:** every AC in scope maps to a step and a test, and every step maps back to a Ref or is marked `scaffold`.
+- **Optional execution waves** for big units: group the steps into waves, each owning separate files. Overlapping steps move to the next wave.
 
-**Part 2: Generate.** Loop:
-1. Take the first `[ ]` step.
-2. Do exactly that step: modify existing files in place, create new files at the planned paths.
-3. Mark it `[x]` immediately. Mark each story `[x]` in the plan once its acceptance criteria are implemented.
-4. Update `aidlc-state.md`.
+Apply the code-plan conflict rules. Summarise the plan in chat, log the prompt, and **stop for explicit approval**.
 
-Rules:
-- No hard-coded business logic that belongs in configuration or data.
-- No features outside the plan. If something is missing, stop and propose a plan change.
-- Add stable test ids to UI elements (`data-testid="{component}-{role}"`).
-- After generating, check that no duplicate or `*_new` files were created.
-- If the plan proves wrong mid-execution, **stop** (execution intervention). Explain what diverged and propose a plan update for approval.
+**Part 2: Generate.**
+- **If you can spawn subagents,** delegate each unit, or each wave, to a **fresh** subagent. Give it:
+  - this unit's design summaries and plan
+  - `standards/` and `memory.md`
+  - the test command
+  - this instruction: "tick checkboxes as you go; never relax targets; add any new data-model element to the plan first"
+- **The loop:**
+  1. Take the first `[ ]` step.
+  2. Do exactly that step: modify files in place, or create them at the planned path.
+  3. Tick `[x]`, and tick each story once its ACs are implemented.
+  4. Update the state file.
+- **Before the gate:**
+  - Run the unit's test command, plus lint and type-check. Fix failures within the plan's scope.
+  - Check that no duplicate or `*_new` files exist.
+  - Check that the diff contains no unplanned files.
+- **The plan proves wrong mid-way:** stop (execution intervention), explain what diverged, and propose a plan update for approval.
+- **A step keeps failing,** after at most 2 attempts at the same error: **halt and ask: Retry with change / Skip (mark `[S]` with a reason; dependents wait) / Abort (pause the workflow)**. This applies whatever the autonomy setting.
 
-Write a short `construction/{unit}/code/code-summary.md` listing:
+**Write `construction/{unit}/code/code-summary.md`:**
+- a Summary
 - files created and modified
-- the story → file → test traceability table
+- a story → AC → file → test table, with Deferred and N/A rows and their reasons
+- how to verify
+- accepted risks
+- setup notes (instead of editing README)
 
-Gate: 💻 **Code Generation Complete - <unit>** (list the created and modified files).
+Gate: 💻 **Code Generation Complete - <unit>**. The reviewer must have run the tests.
 
-Then move to the next Unit, or to Build & Test after the last one.
+## Build & Test (always, once after all units)
+Validate the whole system with a **test pyramid**: unit, then integration, then e2e.
 
-## Build & Test (always, once after all Units)
-Validate the whole system with a **test pyramid**: many unit tests, then fewer integration tests, then a few end-to-end tests.
+1. **Target inventory.** Collect every measurable target from the NFRs and the code plans.
+2. **Run** the build, then unit, integration and e2e tests. Add performance and security tests where the NFRs or extensions require them.
+3. **Failure ladder:**
+   1. **Config, environment or scaffolding problems:** fix them in this stage, at most 2 attempts.
+   2. **Classify the root cause:** generated code, or a design choice. Estimate each fix's effort and risk.
+   3. **Loop back to Code Generation** for only the affected unit. This needs the human's OK, unless autonomy was granted. At most 3 loop-backs, each recorded in `## Loop-Back Log`.
+   4. **Halt and ask.** List every candidate fix with its impact. Giving up is always the human's call.
 
-1. Build the project. Run the unit tests, then the integration tests, then e2e. Add performance and security tests if NFRs require them.
-2. On failures, run **Mob Testing**:
-   - group the failures by root cause
-   - propose fixes, each traced to the plan step or story
-   - the human approves fixes before you apply them
-   - re-run
-3. Write to `construction/build-and-test/`:
-   - `build-instructions.md`
-   - `unit-test-instructions.md`
-   - `integration-test-instructions.md`
-   - `e2e-test-instructions.md`
-   - `performance-test-instructions.md` or `security-test-instructions.md`, when applicable
-   - **`build-and-test-summary.md`** (see below)
-4. The **Summary Report** in `build-and-test-summary.md` is the **go/no-go decision document for Operations**. It covers:
-   - build status
-   - pass/fail counts per test level
-   - acceptance-criteria coverage, per story
-   - NFR results against targets
-   - known issues and risks
-   - recommendation: GO or NO-GO, with reasons
+   **Mob Testing:** group failures by root cause, so each cause is fixed once.
+4. **Operational readiness** (advisory):
+   - health and readiness endpoints respond
+   - a missing required env var exits with a clear message
+   - SIGTERM exits cleanly
+   - structured logging is used
+   - metrics are exposed
+5. **Write `construction/build-and-test/`:**
+   - instructions: build, unit, integration, e2e, and performance or security when applicable
+   - `test-results.md`: build output, counts per level, the Loop-Back Log, and tests written but not run, with the reason
+   - **`build-and-test-summary.md`**, the **GO/NO-GO** document for Operations. It contains:
+     - **Target Verification Matrix**
 
-Gate: 🔨 **Build and Test Complete**. Ask whether to proceed to Operations (`ai-dlc-operations`) or to finish.
+       | Target ID | Source | Expected | Actual | Evidence | Verdict |
+       |---|---|---|---|---|---|
 
-## Leaving Construction: verification gate
-- [ ] every story's acceptance criteria map to at least one passing test
-- [ ] every plan step is `[x]`, and no unapproved extras are in the diff
-- [ ] the ADRs exist for every one-way-door decision
-- [ ] the Summary Report recommends GO, or the human has explicitly accepted the listed risks
+       The verdict is exactly one of Met, Not Met or Unverified. N/A is allowed only with a reason. Node or jsdom runs count as integration evidence, not browser evidence.
+     - **Requirement coverage matrix:** each AC marked Covered, Partial or Not implemented, plus cross-unit handoffs that nobody built.
+     - operational-readiness results, known issues, enabled extension compliance
+     - **Recommendation: GO or NO-GO,** with reasons. Any failed command, or any Not Met or Unverified target, means NO-GO, unless the human explicitly accepts it.
+
+Gate: 🔨 **Build and Test Complete**. Ask whether to go on to Operations (`ai-dlc-operations`) or finish.
+
+## Leaving Construction
+Write `verification/phase-check-construction.md` and confirm:
+- [ ] every in-scope AC maps to a passing test, or is Deferred with a reason
+- [ ] every plan step is `[x]` or `[S]`, and the diff has no unapproved extras or unrequested data-model elements
+- [ ] ADRs exist for every one-way-door decision, and are indexed in `standards/decisions-index.md`
+- [ ] the reviews have no open Critical findings, unless they were explicitly accepted
+- [ ] the Summary Report says GO, or the human has accepted the listed risks
+
+For a cross-unit consistency check (2+ units), run `ai-dlc-review` in design mode before the first Code Generation.
+
+## Common failures
+- Writing code before the plan is approved, or drifting from the plan without saying so.
+- Deferring all tests to Build & Test.
+- "Fixing" a red build by loosening a threshold or deleting an assertion.
+- Inventing tables or fields nobody asked for.
+- Claiming NFRs are met without running anything.
+- Editing README or other user-owned files by default.
+- Reusing one long context across many units. Use fresh subagents and load summaries.
+- Looping forever on a failing step instead of halting with Retry / Skip / Abort.

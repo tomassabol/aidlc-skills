@@ -10,7 +10,8 @@ When AI can produce a feature in hours, **human decision-making becomes the bott
   - **AI-managed:** AI builds the whole thing in one shot with little human input, and the result usually needs heavy rework.
 - AI-DLC sits in between. AI does the heavy lifting across every stage, and humans stay in control of the critical decisions.
 
-## The nine principles (course framing)
+## Principles
+AWS teaches nine principles in the Skill Builder course. The AI-DLC Method Definition paper lists ten, adding "cater to complex systems; simple low-code work is out of scope". They are the same ideas, grouped differently. The course version:
 1. Reimagine workflows for the AI era. Don't retrofit AI into old ones.
 2. Reverse the conversation: AI orchestrates and proposes, humans validate and decide.
 3. Design techniques such as DDD are core, not optional, because they give the AI richer context.

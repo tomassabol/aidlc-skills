@@ -1,189 +1,220 @@
 ---
 name: ai-dlc-inception
-description: AI-DLC Inception phase. Turns a business Intent into approved requirements, User Stories and independently buildable Units of Work through Mob Elaboration (AI proposes, humans validate). Use when starting a new feature or project with AI-DLC, when the user asks to "elaborate", "break down an intent", write requirements or user stories, plan units of work, reverse-engineer an existing codebase before changing it, or when aidlc-state.md shows the Inception phase in progress.
+description: AI-DLC Inception phase. Turns a business Intent (or a discovery brief / PR-FAQ / PRD) into approved requirements, User Stories and independently buildable Units of Work through Mob Elaboration, where the AI proposes and humans validate. Includes brownfield reverse engineering and the execution plan that decides which later stages run. Use when starting a feature or project with AI-DLC, when asked to elaborate or break down an intent, write requirements or user stories, plan units of work, or reverse-engineer a codebase before changing it, or when aidlc-state.md shows Inception in progress. Do not use for one-line fixes or ad-hoc questions about code.
 ---
 
 # AI-DLC Inception: WHAT and WHY
 
-Inception turns a business idea into clearly defined work. It answers three questions:
+Inception answers three questions:
 - **Why:** the **Intent**, meaning the business purpose.
 - **What:** **User Stories**, meaning the outcomes that deliver value.
 - **How:** **Units of Work**, meaning independently buildable clusters of stories.
 
-**Success criterion:** when Inception ends, teams can start building straight away. No more clarification meetings are needed.
+**Success:** teams can start building straight away, with no further clarification meetings.
 
-The ritual is **Mob Elaboration**. The AI proposes breakdowns, and product, development and QA give real-time reality checks. When working with one person, tag every question by role (`[product]`, `[dev]`, `[qa]`, `[ops]`, `[security]`) so they can pull in the right people.
+The ritual is **Mob Elaboration**. The AI proposes breakdowns, and product, development and QA give real-time reality checks. Tag every question by role so a single user can pull in the right people.
 
-## Shared rules (from the `ai-dlc` orchestrator)
-If the `ai-dlc` skill is installed, its rules and references apply: question format, state, audit, gates. In short:
+## Inputs and outputs
+| | |
+|---|---|
+| **Required** | the user's request (the Intent) |
+| **Optional** | `aidlc-docs/discovery/brief.md`, a PR/FAQ or PRD, tickets, existing docs, the existing codebase |
+| **Writes** | `aidlc-docs/inception/**`, `aidlc-state.md`, `audit.md`, `verification/phase-check-inception.md`, `standards/` (brownfield) |
+| **Hands off to** | `ai-dlc-construction`, starting with the first Unit in dependency order |
+
+**Running without the orchestrator.** If `ai-dlc` isn't installed or no state exists, create `aidlc-docs/aidlc-state.md` and `audit.md` lazily, the first time you need them. The shared rules below still apply.
+
+## Shared rules (full versions in the `ai-dlc` skill)
 - Docs go in `aidlc-docs/`, code never does.
-- Questions go in files with `[Answer]:` tags. Never decide critical things alone.
-- Plan, then get approval, then execute step by step, ticking `[x]` in the same turn.
-- Log every user input verbatim in `aidlc-docs/audit.md`, append-only.
-- Every stage except Workspace Detection ends at a **hard-stop gate** with Request Changes / [Add Skipped Stage] / Approve & Continue.
+- Questions go in files, with 2 to 4 options plus X) Other, a role tag, and a `Recommended:` line. Look things up in the repo before asking.
+- Plan, then approval, then execute step by step, ticking `[x]` in the same turn. Log every user input verbatim.
+- Every artifact opens with a `## Summary` of 10 lines or fewer. Every question file ends with a `## Decisions Summary`.
+- **Assumptions stay assumptions** until they're confirmed in a question file.
+- Each stage gets an advisory review before its gate.
+- Every stage except Workspace Detection ends at a **hard-stop gate**: Request Changes / [Add Skipped Stage] / Approve & Continue.
 
 ## Stage sequence
 
 ```
 Workspace Detection → [Reverse Engineering] → Requirements Analysis → [User Stories]
-   → Workflow Planning → [Application Design] → [Units Generation] → Construction
+   → Workflow Planning → [Application Design] → [Units Generation] → exit checks → Construction
 ```
-Stages in brackets are conditional. Workflow Planning decides them, and the user can override.
 
 ---
 
 ## 1. Workspace Detection (always, no gate)
-1. Log the request verbatim in `audit.md`.
-2. If `aidlc-docs/aidlc-state.md` exists, resume instead (see the `ai-dlc` skill).
-3. Scan for source, build, test, CI and IaC files. Record languages, build system, structure, and workspace root.
-4. Decide greenfield or brownfield. For brownfield:
-   - If reverse-engineering artifacts are missing, or older than the last significant code change, run Reverse Engineering.
-   - Otherwise load them and skip it.
-5. Create `aidlc-state.md`, print a 3 to 5 line summary, and **continue automatically**.
+1. Log the request verbatim. If state already exists, resume instead.
+2. Scan source, build, test, CI and IaC files. Record the languages, build system, structure and workspace root.
+3. Brownfield: if the reverse-engineering artifacts are missing, or older than the last significant code change, run Reverse Engineering. Otherwise load their summaries and skip it.
+4. **Practices (brownfield, first Intent only).** If `aidlc-docs/standards/` doesn't exist:
+   - Infer the coding conventions, branching, test setup and CI from the repo and git history.
+   - Confirm them in 1 to 3 questions.
+   - Write `standards/coding-standards.md` and `standards/tech-stack.md`.
+5. Write the state file, print a 3 to 5 line summary, and **continue automatically**.
 
-## 2. Reverse Engineering (brownfield only)
-Build a semantic model **before** proposing changes. Legacy code hides business rules.
-- **Static model:** packages, components, responsibilities, relationships.
-- **Dynamic model:** how components interact for the key business transactions.
+## 2. Reverse Engineering (brownfield)
+Build a semantic model **before** proposing changes, because legacy code hides business rules.
+- The **static model** covers components, responsibilities and relationships.
+- The **dynamic model** covers how components interact for the key business transactions.
 
-Write these to `aidlc-docs/inception/reverse-engineering/`:
+**Procedure** (it can be resumed; progress goes in `reverse-engineering/progress.md`):
+1. **Structure scan:** a cheap pass over the folders, build files and entry points. List the modules.
+2. **Module by module:**
+   - Read the files in one module, write its findings, then move to the next.
+   - Split modules with 150+ files.
+   - Every claim cites `file:line`.
+   - With 6+ modules and subagents available, use one subagent per module.
+3. **Cross-cutting pass:** read only the generated findings and write the outputs below.
 
-| File | Contents |
+For **bugfix** and **security-patch** profiles, scope the work to the touched area and its direct dependencies.
+
+| File (`inception/reverse-engineering/`) | Contents |
 |---|---|
-| `business-overview.md` | business context, list of business transactions, glossary |
+| `business-overview.md` | business context, business transactions, glossary |
 | `architecture.md` | Mermaid component and data-flow diagrams, integrations, infra |
-| `code-structure.md` | build system, key modules, **inventory of existing files** (the candidates for change), patterns |
+| `code-structure.md` | build, key modules, **inventory of existing files** (the candidates for change), patterns |
+| `business-rules.md` | rules found in the code, state machines as tables, with `file:line`. This is the baseline for A/B refactors. |
 | `api-documentation.md` | external APIs, internal interfaces, data models |
-| `component-inventory.md` | application, infra, shared and test packages |
-| `technology-stack.md` | languages, frameworks, versions, runtime |
-| `dependencies.md` | internal dependency graph, external dependencies and licenses |
-| `code-quality-assessment.md` | tests and coverage, lint, CI, tech debt, risky areas |
-| `reverse-engineering-timestamp.md` | when it was generated, and at which commit |
+| `security.md` | auth coverage, unprotected endpoints, secrets handling, env-var inventory |
+| `technology-stack.md`, `dependencies.md` | versions, internal graph, external dependencies and their licenses |
+| `code-quality-assessment.md` | tests and coverage, lint, CI, tech debt heatmap (module × risk) |
+| `reverse-engineering-timestamp.md` | the date and commit it was generated from |
 
-Gate: 🔍 **Reverse Engineering Complete**. Ask humans to validate both models, since they are the base for every later decision.
+Gate: 🔍 **Reverse Engineering Complete**. Humans validate both models.
 
 ## 3. Requirements Analysis (always, adaptive depth)
 Act as the product owner.
-1. **Intent analysis.** Classify clarity, type, scope and complexity. Pick a depth: Minimal, Standard or Comprehensive.
-2. **Check the Intent's quality.** A good Intent:
-   - is in **business language**
-   - describes **specific capabilities**
-   - **avoids premature technology choices**
 
-   For example, "Build a portal with React and PostgreSQL where employees submit ideas" fails: it fixes the tech stack and doesn't say what the system must do. If the Intent fails, ask questions to rewrite it before going further.
-3. Gather what the user already provided: docs, tickets, pasted text. Convert it to markdown under `requirements/`.
-4. Check completeness across six areas: functional, non-functional, user scenarios, business context, technical context, quality attributes.
-5. Write `requirements/requirement-verification-questions.md` (see [references/templates.md](references/templates.md)). Skip it only when the requirements are exceptionally clear. **Stop** until all answers are in and validated, and write a clarification file for anything vague or contradictory.
-6. Write `requirements/requirements.md`:
-   - intent analysis
-   - the rewritten Intent statement
-   - functional requirements (`FR-n`)
-   - non-functional requirements (`NFR-n`)
-   - assumptions
+1. **Intent intake.**
+   - **If there's a discovery brief, PR/FAQ or PRD, use it as the Intent source.** Map it like this:
+     - decision and conditions → constraints
+     - success criteria → Success Measures
+     - open hypotheses → Assumptions & Open Questions
+     - personas → stories input
+   - Then ask only about the gaps, starting with a Q0 that confirms what you took from the documents.
+2. **Intent analysis.** Classify clarity, type, scope and complexity, and pick a depth.
+3. **Check the Intent's quality.** A good Intent is in business language, names specific capabilities, and makes **no premature technology choices**. For example, "a React + PostgreSQL portal for ideas" fails. Rewrite it with the user.
+4. **Check completeness** across functional needs, NFRs, user scenarios, business context, technical context and quality attributes.
+5. **Corner-case sweep** (Standard and Comprehensive depth). Cross each named component with [references/corner-checklist.md](references/corner-checklist.md). Settle every corner that applies as exactly one of:
+   - a requirement or AC
+   - an assumption with a reason
    - out of scope
-7. Gate: 🔍 **Requirements Analysis Complete**. Offer "📝 Add User Stories" if the stories stage is going to be skipped.
+
+   Ask only about facts in the user's world. Turn corners that have a sensible default into assumptions.
+6. **Questions file:** `requirements/requirement-verification-questions.md`. It must include:
+   - **team size and timeline** (the conflict rules use these)
+   - the opt-in question for each extension (security, resiliency, PBT)
+
+   Validate the answers, apply the Requirements conflict rules, and get the summary confirmed. **Stop** until everything is answered.
+7. **Write `requirements/requirements.md`** from [references/templates.md](references/templates.md):
+   - a Summary, the Intent analysis and the rewritten Intent
+   - **Success Measures** as metric, baseline, target and check date
+   - FRs and NFRs, each with hierarchical IDs (`FR1`, `FR1.2`, `NFR2`) and **source tags** (`[desc]`, `[Q3]`, `[doc]`, `[assumption]`)
+   - Assumptions & Open Questions, with each item labelled Known, Assumed or Needs evidence
+   - out of scope, and open decisions
+8. Gate: 🔍 **Requirements Analysis Complete**. Offer "📝 Add User Stories" if that stage will be skipped. Offer "🧪 Spike first" (`ai-dlc-spike`) if a key assumption is risky.
 
 ## 4. User Stories (conditional)
-- **Run it** for:
-  - user-facing features
-  - UX changes
-  - multiple personas
-  - customer-facing APIs
-  - complex business rules
-  - cross-team work
-- **Skip it** only for pure refactors, isolated bug fixes, infra-only work, tooling or docs.
+- **Run it** for user-facing features, UX changes, multiple personas, customer-facing APIs, complex rules, or cross-team work.
+- **Skip it** only for pure refactors, isolated bugfixes, infra-only work, tooling or docs.
 - When in doubt, run it.
 
-**Part 1: Plan.**
-1. Write `inception/plans/user-stories-assessment.md` (why the stories add value).
-2. Write `inception/plans/story-generation-plan.md`: checkbox steps plus embedded questions on:
-   - personas
-   - granularity
-   - breakdown approach (by journey, feature, persona, domain, or a hybrid)
-   - acceptance-criteria format
-3. Validate the answers.
-4. Get **explicit plan approval**.
+**Part 1, plan:**
+1. Write `plans/user-stories-assessment.md` and `plans/story-generation-plan.md`. The plan has embedded questions on personas, granularity, the breakdown approach (journey, feature, persona, domain or hybrid) and the AC format.
+2. Validate the answers, confirm the summary, and get **plan approval**.
 
-**Part 2: Generate.** Work through the plan, ticking steps as you go:
-- `user-stories/personas.md`
-- `user-stories/stories.md`
-
-Each story:
-- is the **smallest negotiable slice of functionality that delivers user value**
-- follows INVEST
-- has **clear, testable acceptance criteria** in Given/When/Then form
-- maps to one or more personas
-- traces to FR or NFR ids
+**Part 2, generate:**
+- `user-stories/personas.md` and `stories.md`. Each story:
+  - is the smallest negotiable slice of value
+  - follows INVEST
+  - has testable ACs in Given/When/Then form, with IDs `US1.3` / `AC1.3.2`
+  - traces to FRs
+- A coverage table from FR to story, using OK / GAP / Deferred / N/A.
 
 Gate: 📚 **User Stories Complete**.
 
 ## 5. Workflow Planning (always): the Level 1 plan
-Load all prior artifacts, then analyse:
-- **Impact:** user-facing, structural, data model, API, NFR, infra, ops.
-- **Risk level:** Low, Medium, High or Critical.
-- **Brownfield:** components touched, with change type, reason and priority; update order; what can run in parallel; critical path; rollback strategy.
-- **EXECUTE or SKIP decision** for each remaining stage: Application Design, Units Generation, and per-unit Functional Design, NFR Requirements, NFR Design, Infrastructure Design, plus Operations stages. Give a one-line rationale for each.
+Load the summaries of all prior artifacts.
 
-Write `inception/plans/execution-plan.md` (template in [references/templates.md](references/templates.md)). It contains:
-- the summary
-- a Mermaid flowchart of the stages, marked EXECUTE, SKIP or COMPLETED
-- a checklist with rationale
-- the change sequence
-- success criteria and quality gates
+1. **Impact:** user-facing, structural, data model, API, NFR, infra, ops.
+2. **Risk:** Low, Medium, High or Critical.
+3. **Brownfield:** for each component, the change type, reason, priority and update order; what can run in parallel; the critical path; rollback.
+4. **Decide EXECUTE or SKIP** for each remaining stage, with a one-line rationale. Use the thresholds in §7 for Units Generation.
+5. **Pick the Bolt type** for each unit (simple, ddd or spike). See the `ai-dlc-construction` skill.
+6. Write `plans/execution-plan.md` with:
+   - a Summary
+   - a Mermaid flow with a text fallback
+   - a checklist with the rationale for each stage
+   - the change sequence
+   - success criteria and quality gates
+   - open decisions
+7. Update the state file.
 
-Update the Stage Progress list in `aidlc-state.md`.
-
-Gate: 📋 **Workflow Planning Complete**, with three options:
-- 🔧 Request Changes
-- 📝 Add Skipped Stages
-- ✅ Approve & Continue
+Gate: 📋 **Workflow Planning Complete**: Request Changes / Add Skipped Stages / Approve & Continue.
 
 ## 6. Application Design (conditional: new components or services)
-1. Write the plan `inception/plans/application-design-plan.md`, with questions on:
-   - component boundaries
-   - responsibilities
-   - interfaces
-   - communication style
-   - patterns
-2. Get approval.
-3. Generate into `application-design/`:
-   - `components.md`: each entity has exactly one owning component
-   - `component-methods.md`: signatures only, since business rules come later in Functional Design
+1. Write the plan with questions on component boundaries, responsibilities, interfaces, communication style and patterns. Get approval.
+2. Generate into `application-design/`:
+   - `components.md`: each entity has **exactly one owning component**
+   - `component-methods.md`: signatures only
    - `services.md`
-   - `component-dependency.md`: a dependency matrix and the communication patterns
-   - `application-design.md`: consolidates the above
-   - `decisions.md`: ADR log for one-way-door decisions
+   - `component-dependency.md`
+   - `application-design.md`
+   - `decisions.md`: ADRs for one-way doors; also add each one to `standards/decisions-index.md` with a "Read when" line
+3. **Check traceability both ways:** every story maps to at least one component, and every component maps back to a story or is justified as `scaffold`.
 
-Gate: 🏗️ **Application Design Complete**, offering "📝 Add Units Generation" if that stage is skipped.
+Gate: 🏗️ **Application Design Complete**. Offer "📝 Add Units Generation" if it's skipped, and "🧪 Spike" for a risky pattern.
 
-## 7. Units Generation (conditional: more than one Unit, or parallel teams)
-A **Unit of Work** is a self-contained, loosely coupled cluster of related stories that one team can build and deploy independently. Think of it as a DDD bounded context or an epic.
-- In microservices, each service is a Unit.
-- A monolith is one Unit with modules.
+## 7. Units Generation (conditional)
+**Run it when any of these hold:** 5+ stories, 2+ business domains, 3+ user types, 3+ external integrations, or parallel teams. For brownfield work that extends one existing module, raise the bar to 10+ stories *and* 3+ domains.
 
-**Part 1: Plan.** Write `inception/plans/unit-of-work-plan.md`, with questions on:
-- story grouping
-- bounded contexts
-- dependencies
-- team alignment
-- code organisation (greenfield)
+A **Unit of Work** is a self-contained, loosely coupled cluster of stories that one team can build and deploy on its own. Think of it as a bounded context. It has a `kind`: service, ui, library, infra or spec.
 
-Get approval.
+**Finding the boundaries:**
+- clusters of stories that change together
+- nouns that appear together
+- where ownership of the data changes
+- ask "if this changed, what else would have to change?"
 
-**Part 2: Generate** into `application-design/`:
-- `unit-of-work.md`: for each Unit, its purpose, stories, owned entities, interfaces, and (greenfield) code location
-- `unit-of-work-dependency.md`: the dependency matrix as a DAG. **No cycles.** If you find one, propose a merge or a split.
-- `unit-of-work-story-map.md`: **every story assigned to exactly one Unit**
-- **Suggested Bolts:** for each Unit, 1 or more Bolts (hours to days each) with a Definition of Done. Consider making the first Bolt a **walking skeleton**: the thinnest end-to-end slice.
+**Sizing:** 3 to 8 stories per unit is healthy. Merge units with 1 to 2, and split units with 15+.
 
-Gate: 🔧 **Units Generation Complete**.
+**Pitfalls to avoid:**
+- several units writing to the same tables
+- anemic CRUD-only units
+- units that all depend on everything
 
-## Leaving Inception: verification gate
-Before you offer to start Construction, check:
-- [ ] every FR is covered by at least one story (or is explicitly out of scope)
-- [ ] every story has testable acceptance criteria and belongs to exactly one Unit
-- [ ] the Unit dependency graph has no cycles, and the integration contracts between Units are named
-- [ ] all question files are answered, and no clarification is open
-- [ ] `execution-plan.md` is approved
+**Foundation unit (optional, greenfield):** a "Unit 0" with no stories. It covers repo structure, auth, error format, contracts, DB setup and CI base. It runs first, and later units follow its conventions without asking again.
 
-Report any gaps. Once everything passes, hand off to `ai-dlc-construction` for the first Unit in dependency order.
+**Part 1, plan:** `plans/unit-of-work-plan.md`, with questions on grouping, bounded contexts, dependencies, team alignment and code organisation. Get approval.
+
+**Part 2, generate** into `application-design/`:
+- `unit-of-work.md`: for each unit, its purpose, kind, stories, owned entities, commands, published and consumed events, interfaces, code location and suggested Bolts
+- `unit-of-work-dependency.md`: a DAG with **no cycles**, plus a context map (customer/supplier, shared kernel, ACL, pub/sub)
+- `unit-of-work-story-map.md`: every story in **exactly one** unit, plus the screen, command or endpoint it's "reached through"
+- **Delivery notes:**
+  - Bolts per unit: type, Definition of Done, confidence hypothesis
+  - the walking skeleton first
+  - external dependencies, each with an owner, lead time and fallback
+  - the sequencing rationale: risk-first, value-first or skeleton-first
+
+Apply the Units conflict rules. Gate: 🔧 **Units Generation Complete**.
+
+## Leaving Inception
+1. **Risk checklist:** run [references/risk-checklist.md](references/risk-checklist.md).
+   - Settle every BLOCK, or record a waiver in `audit.md` (who, why, expiry).
+2. **Phase check:** write `aidlc-docs/verification/phase-check-inception.md` and confirm that:
+   - [ ] every FR is covered by a story, or is Deferred or out of scope with a reason
+   - [ ] every story has testable ACs and belongs to exactly one unit
+   - [ ] the unit graph has no cycles, and integration contracts are named
+   - [ ] no question or clarification is open, and no assumption is used as if it were confirmed
+   - [ ] `execution-plan.md` is approved
+3. Report any gaps. Then hand off to `ai-dlc-construction`.
+
+## Common failures
+- Writing requirements that copy the request's tech choices instead of describing capabilities.
+- Asking things the repo already answers, or asking again what an earlier file settled.
+- Stories with untestable ACs ("fast", "user-friendly").
+- Treating an assumption or an unselected option as a decided requirement.
+- Too many tiny units, or a cycle between units.
+- Skipping Reverse Engineering on brownfield work "because the change is small". Scope it instead.
+- Generating artifacts from memory instead of from the template file.

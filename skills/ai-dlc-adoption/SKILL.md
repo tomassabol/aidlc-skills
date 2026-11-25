@@ -35,9 +35,10 @@ Write a checklist and mark each item ✅, ⚠️ or ❌, with an owner for each 
 |---|---|---|---|
 | **Manual prompts** | people paste AI-DLC prompt templates per stage | trying it out, workshops, maximum flexibility | inconsistent; depends on individual discipline |
 | **System prompts / steering rules / skills** | rules loaded automatically (CLAUDE.md, AGENTS.md, Kiro steering, these skills) | team-wide consistency with little setup | rules can drift per repo; enforcement is advisory |
-| **MCP servers / workflow engine** | programmatic orchestration, with state, gates and audit enforced by tools | regulated environments, many teams, maximum consistency | most technical setup and maintenance |
+| **Skills + harness hooks** | the skills, plus agent hooks that enforce gates: e.g. a stop-hook that refuses to end a turn past an unapproved gate, a pre-tool hook that blocks writes to secret files, and a tool-call audit log | teams that want enforcement without running an engine | specific to one agent harness; hooks need setup and upkeep |
+| **MCP servers / workflow engine** | programmatic orchestration, with state, gates and audit enforced by tools. The official example is the engine in `awslabs/aidlc-workflows` (installed with the `aidlc` CLI; runs on Claude Code, Kiro, Codex, Cursor and Copilot) | regulated environments, many teams, maximum consistency | most technical setup and maintenance |
 
-Recommend one with a one-paragraph rationale. Most teams start with **skills or system prompts** and move to MCP or an engine once the process has settled.
+Recommend one with a one-paragraph rationale. Most teams start with **skills or system prompts** and add hooks or an engine once the process has settled. These skills are the lightweight tier: plain markdown, modelled on the original AI-DLC rules plus selected ideas from the newer engine.
 
 ## 3. Pilot plan
 1. **Pick the pilot Intent.** It should be real, of moderate complexity, with a cooperative product owner and clear success measures. Avoid both a trivial demo and a mission-critical deadline.
@@ -70,7 +71,13 @@ AI-DLC can take **slightly longer up front** than ad hoc AI use. Its payoff show
 - number of clarification meetings needed after Inception (target: zero)
 - team survey on shared understanding
 
-Expect the quality metrics to **improve over time** as teams master the workflow and give better context. Report trends, not single data points. Suggest reviewing them at each retro and turning the findings into rule or skill updates.
+**Process conformance** (is the method actually being followed?)
+- **Gates honoured:** the share of gates with a logged prompt and an explicit approval in `audit.md`. Look for skipped or inferred approvals.
+- **Questions answered by humans vs auto-filled.**
+- **Plan drift:** files in diffs that weren't in the approved plan.
+- **Eval runs:** re-run the scenarios in the skills repo's `evals/` folder after changing rules or skills, and check that the expected stops and artifacts still happen.
+
+Expect the quality metrics to **improve over time** as teams master the workflow and give better context. Report trends, not single data points. Review them at each retro, and append the lessons to `aidlc-docs/memory.md` as ALWAYS, NEVER or PREFER rules, or turn them into rule or skill updates.
 
 ## Output
 The adoption plan should contain:
