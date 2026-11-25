@@ -27,6 +27,7 @@ Adjust severity by context. **Team size and timeline** are mandatory Requirement
 | RQ-5 | A success measure has no baseline, target or check date | Medium |
 | RQ-6 | A requirement names a technology without a stated constraint (premature tech choice in the Intent) | Medium |
 | RQ-7 | Scope "MVP", but 15+ must-have stories | Low |
+| RQ-8 | A team of 1 to 2 people and a timeline under 1 month, but the draft has 15+ functional requirements (counting sub-requirements) or 10+ assumptions. Propose an MVP cut (P0 now, the rest Deferred) before writing the full document. | Medium (raised to High by the small-team rule) |
 
 ## Units / decomposition
 | ID | Fires when | Severity |

@@ -48,7 +48,7 @@ Workspace Detection → [Reverse Engineering] → Requirements Analysis → [Use
 3. Brownfield: if the reverse-engineering artifacts are missing, or older than the last significant code change, run Reverse Engineering. Otherwise load their summaries and skip it.
 4. **Practices (brownfield, first Intent only).** If `aidlc-docs/standards/` doesn't exist:
    - Infer the coding conventions, branching, test setup and CI from the repo and git history.
-   - Confirm them in 1 to 3 questions.
+   - Confirm them in 1 to 3 questions. **Put these questions in the Requirements question file.** Never open a separate question round just for practices.
    - Write `standards/coding-standards.md` and `standards/tech-stack.md`.
 5. Write the state file, print a 3 to 5 line summary, and **continue automatically**.
 
@@ -103,7 +103,11 @@ Act as the product owner.
    Ask only about facts in the user's world. Turn corners that have a sensible default into assumptions.
 6. **Questions file:** `requirements/requirement-verification-questions.md`. It must include:
    - **team size and timeline** (the conflict rules use these)
-   - the opt-in question for each extension (security, resiliency, PBT)
+   - the opt-in question for each extension (security, resiliency, PBT), **only when it's relevant**:
+     - **bugfix and trivial profiles:** skip the opt-ins, unless the fix touches auth, input handling, data storage or deployment.
+     - **security-patch profile:** security is on automatically; just say so.
+     - **other profiles:** ask, as usual.
+   - For small fixes, aim for **one question round in total**, and 5 questions or fewer.
 
    Validate the answers, apply the Requirements conflict rules, and get the summary confirmed. **Stop** until everything is answered.
 7. **Write `requirements/requirements.md`** from [references/templates.md](references/templates.md):

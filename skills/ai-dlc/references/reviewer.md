@@ -14,6 +14,18 @@ Before each gate, a reviewer with fresh eyes checks the artifact. It catches the
 | Functional Design, NFR Requirements/Design, Infrastructure Design, Code Generation | **Fix loop:** you fix the findings and the reviewer checks again, **at most 2 rounds** |
 | Trivial profile, or Minimal depth | skip, or self-review only |
 
+**Acting on findings.** Mechanical findings you may fix yourself:
+- broken references
+- untestable wording
+- missing IDs or tags
+- formatting
+
+Findings that need a **product or policy decision**, such as who can see or do what, lifecycle rules, or limits, are **not yours to decide**:
+- In advisory mode, list them at the gate as questions or open decisions, each with a recommended answer.
+- If you do add a default so the artifact is complete, mark it `[assumption]`, name it in the gate summary under "Decided by me, please confirm", and keep the count small.
+
+Never report a finding as "fixed" when you resolved it by inventing a rule.
+
 ## How to run it
 - **If the agent can spawn subagents,** dispatch a fresh one. Give it:
   - the stage's artifacts

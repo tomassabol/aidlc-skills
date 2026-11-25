@@ -153,7 +153,9 @@ History stays append-only: answers, audit entries, archive. Current-state docs (
 
 ## Resuming a session
 1. Read `aidlc-state.md`, `memory.md`, and the tail of `audit.md`.
-2. Show a welcome-back summary (project, phase, stage, last step, next step). Ask A continue / B review an earlier stage / X other.
+2. Show a welcome-back summary (project, phase, stage, last step, next step).
+   - **If the current stage is `[?]`** (waiting at a gate with no logged reply), present that gate again. A vague "continue" is **not** approval of it.
+   - **Otherwise,** ask: A continue / B review an earlier stage / X other.
 3. **Load the summaries first.** Read the `## Summary` and `## Decisions Summary` sections of upstream artifacts. Open full files only for the stage being generated.
 
 | Next stage | Load |
